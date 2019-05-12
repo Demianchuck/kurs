@@ -1,0 +1,79 @@
+using System;
+using System.Text;
+using System.Windows;
+using System.Configuration;
+using System.Data.Common;
+
+namespace UserLogin
+{
+    /// <summary>
+    /// Interaction logic for MainWindow.xaml
+    /// </summary>
+    public partial class MainWindow : Window
+    {
+        private string connectionString = ConfigurationManager.ConnectionStrings["UsersDatabaseConnection"].ConnectionString;
+        private string dataProvider = ConfigurationManager.ConnectionStrings["UsersDatabaseConnection"].ProviderName;
+        private const int KEY = 10;
+         public MainWindow()
+        {
+
+            InitializeComponent();
+
+        }
+
+        private void button1_Click(object sender, RoutedEventArgs e)
+        {
+            if (CheckTextBox())
+            {
+                DbProviderFactory dataFactory = DbProviderFactories.GetFactory(dataProvider);
+                using (DbConnection connection = dataFactory.CreateConnection())
+                {
+                    connection.ConnectionString = connectionString;
+                    connection.Open();
+                    DbCommand command = connection.CreateCommand();
+                    command.Connection = connection;
+                    command.CommandText = $"USE {connection.Database}; " +
+                        $"SELECT * FROM Users " +
+                        $"WHERE Login='{textBoxLogin.Text}' AND Password='{CodePass(new StringBuilder(passwordBox1.Password))}'";
+                    DbDataReader reader = command.ExecuteReader();
+                    if (reader.HasRows)
+                    {
+                        reader.Read();
+                        string fName = reader["FirstName"].ToString();
+                        string lName = reader["LastName"].ToString();
+                        MessageBox.Show($"Welcome {fName} {lName}!", $"Login success", MessageBoxButton.OK);
+                    }
+                    else MessageBox.Show("Wrong Login/Password", "Error", MessageBoxButton.OK);
+                    passwordBox1.Password = String.Empty;
+                    textBoxLogin.Text = String.Empty;
+                }
+            }
+        }
+
+        private string CodePass(StringBuilder password)
+        {
+            for (int i = 0; i < password.Length; ++i)
+            {
+                password[i] = (char)((int)password[i] + KEY);
+            }
+            return password.ToString();
+        }
+
+        private bool CheckTextBox()
+        {
+            bool isBoxeContentValid = true;
+            if (textBoxLogin.Text.Length == 0)
+            {
+                errormessage.Text = "Enter your login";
+                isBoxeContentValid = false;
+                passwordBox1.Password = String.Empty;
+                textBoxLogin.Focus();
+            }
+            return isBoxeContentValid;
+        }
+        private void button2_Click(object sender, RoutedEventArgs e)
+        {
+            this.Close();
+        }
+    }
+}
